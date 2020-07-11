@@ -59,6 +59,7 @@ func GetProcessesBySocket(network string, addr string, port uint16) ([]string, e
 		if err != nil {
 			break // no more parents
 		}
+		fmt.Println("GetProcessBySocket result ", ppid, " ", comm," ")
 		processes = append(processes, comm)
 		if ppid == SystemProcessID || ppid == IdleProcessID {
 			break
@@ -116,6 +117,7 @@ func GetPpidAndCommand(pid int) (int, string, error) {
 	defer syscall.CloseHandle(handle)
 
 	var ppid int
+    var cmd2 string
 
 	var pe syscall.ProcessEntry32
 	pe.Size = uint32(unsafe.Sizeof(pe))
@@ -126,8 +128,9 @@ func GetPpidAndCommand(pid int) (int, string, error) {
 
 	if int(pe.ProcessID) == pid {
 		ppid = int(pe.ParentProcessID)
+		cmd2  = syscall.UTF16ToString(pe.ExeFile[:])
+		return  ppid,cmd2,nil
 	} else {
-	Loop:
 		for {
 			var pe syscall.ProcessEntry32
 			pe.Size = uint32(unsafe.Sizeof(pe))
@@ -135,51 +138,103 @@ func GetPpidAndCommand(pid int) (int, string, error) {
 			if err != nil {
 				return 0, "", fmt.Errorf("failed to get next process entry: %v", err)
 			}
+		//	fmt.Println(pe.ProcessID, "  ",syscall.UTF16ToString(pe.ExeFile[:]))
 			if int(pe.ProcessID) == pid {
 				ppid = int(pe.ParentProcessID)
-				break Loop
+				cmd2  = syscall.UTF16ToString(pe.ExeFile[:])
+				fmt.Println("now  ppid ",ppid, " cmd2 ", cmd2)
+				return ppid,cmd2,nil
 			}
 		}
 	}
 
-	mhandle, err := syscall.CreateToolhelp32Snapshot(
-		syscall.TH32CS_SNAPMODULE,
-		uint32(pid), // Create a snapshot only related to the specific pid.
-	)
-	if err != nil {
-		return 0, "", fmt.Errorf("failed to create snapshot: %v", err)
-	}
-	defer syscall.CloseHandle(mhandle)
+	//mhandle, err := syscall.CreateToolhelp32Snapshot(
+	//	syscall.TH32CS_SNAPMODULE,
+	//	uint32(pid), // Create a snapshot only related to the specific pid.
+	//)
+	//if err != nil {
+	//	return 0, "", fmt.Errorf("failed to create snapshot: %v", err)
+	//}
+	//defer syscall.CloseHandle(mhandle)
 
-	var me win.ModuleEntry32
-	me.Size = uint32(unsafe.Sizeof(me))
-	err = win.Module32First(win.Handle(mhandle), &me)
-	if err != nil {
-		return 0, "", fmt.Errorf("failed to get module entry: %v", err)
-	}
+	//var me win.ModuleEntry32
+	//me.Size = uint32(unsafe.Sizeof(me))
+	//err = win.Module32First(win.Handle(mhandle), &me)
+	//if err != nil {
+	//	return 0, "", fmt.Errorf("failed to get module entry: %v", err)
+	//}
+	//
+	//cmd := win.UTF16PtrToString(&me.Module[0])
 
-	cmd := win.UTF16PtrToString(&me.Module[0])
+	//cmd :=syscall.UTF16ToString(pe.ExeFile[:])
+   // fmt.Println("pid is ", pid," ppid is ", ppid, " process name is ", cmd2)
 
-	return ppid, cmd, nil
+	//return ppid, cmd2, nil
 }
 
+//func getNameByPid(pid uint32) (string, error) {
+//	handle, err := syscall.CreateToolhelp32Snapshot(
+//		syscall.TH32CS_SNAPMODULE,
+//		pid,
+//	)
+//	if err != nil {
+//		return "", fmt.Errorf("failed to create snapshot: %v", err)
+//	}
+//	defer syscall.CloseHandle(handle)
+//
+//	var me win.ModuleEntry32
+//	me.Size = uint32(unsafe.Sizeof(me))
+//	err = win.Module32First(win.Handle(handle), &me)
+//	if err != nil {
+//		return win.UTF16PtrToString(&me.Module[0]), nil
+//	} else {
+//		return "", fmt.Errorf("failed to get process entry: %v", err)
+//	}
+//}
+
 func getNameByPid(pid uint32) (string, error) {
+
 	handle, err := syscall.CreateToolhelp32Snapshot(
-		syscall.TH32CS_SNAPMODULE,
-		pid,
+		syscall.TH32CS_SNAPPROCESS,
+		// This argument will be ignored with a SNAPPROCESS flag.
+		// The snapshot will contain all processes, we will need
+		// to iterate over them and filter the desired one.
+		0,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create snapshot: %v", err)
 	}
 	defer syscall.CloseHandle(handle)
 
-	var me win.ModuleEntry32
-	me.Size = uint32(unsafe.Sizeof(me))
-	err = win.Module32First(win.Handle(handle), &me)
+
+	var cmd2 string
+
+	var pe syscall.ProcessEntry32
+	pe.Size = uint32(unsafe.Sizeof(pe))
+	err = syscall.Process32First(handle, &pe)
 	if err != nil {
-		return win.UTF16PtrToString(&me.Module[0]), nil
-	} else {
 		return "", fmt.Errorf("failed to get process entry: %v", err)
+	}
+
+	if pe.ProcessID == pid {
+		cmd2  = syscall.UTF16ToString(pe.ExeFile[:])
+		return  cmd2,nil
+	} else {
+		for {
+			var pe syscall.ProcessEntry32
+			pe.Size = uint32(unsafe.Sizeof(pe))
+			err = syscall.Process32Next(handle, &pe)
+			if err != nil {
+				return "", fmt.Errorf("failed to get next process entry: %v", err)
+			}
+			//	fmt.Println(pe.ProcessID, "  ",syscall.UTF16ToString(pe.ExeFile[:]))
+			if  pe.ProcessID == pid {
+				//ppid = int(pe.ParentProcessID)
+				cmd2  = syscall.UTF16ToString(pe.ExeFile[:])
+			//	fmt.Println("now  ppid ",ppid, " cmd2 ", cmd2)
+				return cmd2,nil
+			}
+		}
 	}
 }
 
