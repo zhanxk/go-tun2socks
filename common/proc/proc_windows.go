@@ -59,7 +59,6 @@ func GetProcessesBySocket(network string, addr string, port uint16) ([]string, e
 		if err != nil {
 			break // no more parents
 		}
-		fmt.Println("GetProcessBySocket result ", ppid, " ", comm," ")
 		processes = append(processes, comm)
 		if ppid == SystemProcessID || ppid == IdleProcessID {
 			break
@@ -117,7 +116,7 @@ func GetPpidAndCommand(pid int) (int, string, error) {
 	defer syscall.CloseHandle(handle)
 
 	var ppid int
-        var cmd2 string
+        var cmd string
 
 	var pe syscall.ProcessEntry32
 	pe.Size = uint32(unsafe.Sizeof(pe))
@@ -128,8 +127,8 @@ func GetPpidAndCommand(pid int) (int, string, error) {
 
 	if int(pe.ProcessID) == pid {
 		ppid = int(pe.ParentProcessID)
-		cmd2  = syscall.UTF16ToString(pe.ExeFile[:])
-		return  ppid,cmd2,nil
+		cmd  = syscall.UTF16ToString(pe.ExeFile[:])
+		return  ppid,cmd,nil
 	} else {
 		for {
 			var pe syscall.ProcessEntry32
@@ -140,9 +139,9 @@ func GetPpidAndCommand(pid int) (int, string, error) {
 			}
 			if int(pe.ProcessID) == pid {
 				ppid = int(pe.ParentProcessID)
-				cmd2  = syscall.UTF16ToString(pe.ExeFile[:])
+				cmd  = syscall.UTF16ToString(pe.ExeFile[:])
 			
-				return ppid,cmd2,nil
+				return ppid,cmd,nil
 			}
 		}
 	}	
@@ -163,7 +162,7 @@ func getNameByPid(pid uint32) (string, error) {
 	defer syscall.CloseHandle(handle)
 
 
-	var cmd2 string
+	var cmd string
 
 	var pe syscall.ProcessEntry32
 	pe.Size = uint32(unsafe.Sizeof(pe))
@@ -173,8 +172,8 @@ func getNameByPid(pid uint32) (string, error) {
 	}
 
 	if pe.ProcessID == pid {
-		cmd2  = syscall.UTF16ToString(pe.ExeFile[:])
-		return  cmd2,nil
+		cmd  = syscall.UTF16ToString(pe.ExeFile[:])
+		return  cmd,nil
 	} else {
 		for {
 			var pe syscall.ProcessEntry32
@@ -184,8 +183,8 @@ func getNameByPid(pid uint32) (string, error) {
 				return "", fmt.Errorf("failed to get next process entry: %v", err)
 			}
 			if  pe.ProcessID == pid {
-				cmd2  = syscall.UTF16ToString(pe.ExeFile[:])
-				return cmd2,nil
+				cmd  = syscall.UTF16ToString(pe.ExeFile[:])
+				return cmd,nil
 			}
 		}
 	}
