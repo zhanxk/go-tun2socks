@@ -117,7 +117,7 @@ func GetPpidAndCommand(pid int) (int, string, error) {
 	defer syscall.CloseHandle(handle)
 
 	var ppid int
-    var cmd2 string
+        var cmd2 string
 
 	var pe syscall.ProcessEntry32
 	pe.Size = uint32(unsafe.Sizeof(pe))
@@ -138,59 +138,15 @@ func GetPpidAndCommand(pid int) (int, string, error) {
 			if err != nil {
 				return 0, "", fmt.Errorf("failed to get next process entry: %v", err)
 			}
-		//	fmt.Println(pe.ProcessID, "  ",syscall.UTF16ToString(pe.ExeFile[:]))
 			if int(pe.ProcessID) == pid {
 				ppid = int(pe.ParentProcessID)
 				cmd2  = syscall.UTF16ToString(pe.ExeFile[:])
-				fmt.Println("now  ppid ",ppid, " cmd2 ", cmd2)
+			
 				return ppid,cmd2,nil
 			}
 		}
-	}
-
-	//mhandle, err := syscall.CreateToolhelp32Snapshot(
-	//	syscall.TH32CS_SNAPMODULE,
-	//	uint32(pid), // Create a snapshot only related to the specific pid.
-	//)
-	//if err != nil {
-	//	return 0, "", fmt.Errorf("failed to create snapshot: %v", err)
-	//}
-	//defer syscall.CloseHandle(mhandle)
-
-	//var me win.ModuleEntry32
-	//me.Size = uint32(unsafe.Sizeof(me))
-	//err = win.Module32First(win.Handle(mhandle), &me)
-	//if err != nil {
-	//	return 0, "", fmt.Errorf("failed to get module entry: %v", err)
-	//}
-	//
-	//cmd := win.UTF16PtrToString(&me.Module[0])
-
-	//cmd :=syscall.UTF16ToString(pe.ExeFile[:])
-   // fmt.Println("pid is ", pid," ppid is ", ppid, " process name is ", cmd2)
-
-	//return ppid, cmd2, nil
+	}	
 }
-
-//func getNameByPid(pid uint32) (string, error) {
-//	handle, err := syscall.CreateToolhelp32Snapshot(
-//		syscall.TH32CS_SNAPMODULE,
-//		pid,
-//	)
-//	if err != nil {
-//		return "", fmt.Errorf("failed to create snapshot: %v", err)
-//	}
-//	defer syscall.CloseHandle(handle)
-//
-//	var me win.ModuleEntry32
-//	me.Size = uint32(unsafe.Sizeof(me))
-//	err = win.Module32First(win.Handle(handle), &me)
-//	if err != nil {
-//		return win.UTF16PtrToString(&me.Module[0]), nil
-//	} else {
-//		return "", fmt.Errorf("failed to get process entry: %v", err)
-//	}
-//}
 
 func getNameByPid(pid uint32) (string, error) {
 
@@ -227,11 +183,8 @@ func getNameByPid(pid uint32) (string, error) {
 			if err != nil {
 				return "", fmt.Errorf("failed to get next process entry: %v", err)
 			}
-			//	fmt.Println(pe.ProcessID, "  ",syscall.UTF16ToString(pe.ExeFile[:]))
 			if  pe.ProcessID == pid {
-				//ppid = int(pe.ParentProcessID)
 				cmd2  = syscall.UTF16ToString(pe.ExeFile[:])
-			//	fmt.Println("now  ppid ",ppid, " cmd2 ", cmd2)
 				return cmd2,nil
 			}
 		}
