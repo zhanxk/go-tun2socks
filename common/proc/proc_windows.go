@@ -154,7 +154,7 @@ func getNameByPid(pid uint32) (string, error) {
 		// This argument will be ignored with a SNAPPROCESS flag.
 		// The snapshot will contain all processes, we will need
 		// to iterate over them and filter the desired one.
-		0,
+		pid,
 	)
 	if err != nil {
 		return "", fmt.Errorf("failed to create snapshot: %v", err)
